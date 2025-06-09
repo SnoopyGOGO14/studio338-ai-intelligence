@@ -1,0 +1,110 @@
+total 2440
+-rw-r--r--  1 lfi  staff       96 Jun  9 22:09 Studio intel workspace Cursor.code-workspace
+-rw-r--r--  1 lfi  staff  1099469 Jun  9 17:00 Studio338 readme AI Intelligence -Claude.pdf
+drwxr-xr-x  6 lfi  staff      204 Jun 10 00:22 agents
+drwxr-xr-x  5 lfi  staff      170 Jun 10 00:22 app
+drwxr-xr-x  4 lfi  staff      136 Jun 10 00:22 deployment
+drwxr-xr-x  5 lfi  staff      170 Jun 10 00:22 docs
+drwxr-xr-x  4 lfi  staff      136 Jun 10 00:22 scripts
+-rw-r--r--  1 lfi  staff    16403 Jun  9 17:00 studio338-base-agent.py
+-rw-r--r--  1 lfi  staff    28988 Jun  9 17:00 studio338-gateway-indexer v2.latest.py
+-rw-r--r--  1 lfi  staff    11351 Jun  9 17:00 studio338-gateway-indexer.py
+-rw-r--r--  1 lfi  staff    26841 Jun 10 00:03 studio338-github-setup v2..py
+-rw-r--r--  1 lfi  staff    10487 Jun  9 17:00 studio338-github-setup.py
+-rw-r--r--  1 lfi  staff    25566 Jun  9 17:00 studio338-wotson-agent v2.py
+-rw-r--r--  1 lfi  staff     6297 Jun  9 17:00 studio338-wotson-agent.py
+drwxr-xr-x  4 lfi  staff      136 Jun 10 00:22 tests
+
+338 AGENT SYSTEM/agents:
+total 0
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 base
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 collaboration
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 studio338
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 tools
+
+338 AGENT SYSTEM/agents/base:
+total 0
+
+338 AGENT SYSTEM/agents/collaboration:
+total 0
+
+338 AGENT SYSTEM/agents/studio338:
+total 0
+
+338 AGENT SYSTEM/agents/tools:
+total 0
+
+338 AGENT SYSTEM/app:
+total 0
+drwxr-xr-x  3 lfi  staff  102 Jun 10 00:22 routers
+drwxr-xr-x  3 lfi  staff  102 Jun 10 00:22 schemas
+drwxr-xr-x  3 lfi  staff  102 Jun 10 00:22 services
+
+338 AGENT SYSTEM/app/routers:
+total 0
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 studio338
+
+338 AGENT SYSTEM/app/routers/studio338:
+total 0
+
+338 AGENT SYSTEM/app/schemas:
+total 0
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 studio338
+
+338 AGENT SYSTEM/app/schemas/studio338:
+total 0
+
+338 AGENT SYSTEM/app/services:
+total 0
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 studio338
+
+338 AGENT SYSTEM/app/services/studio338:
+total 0
+
+338 AGENT SYSTEM/deployment:
+total 0
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 docker
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 kubernetes
+
+338 AGENT SYSTEM/deployment/docker:
+total 0
+
+338 AGENT SYSTEM/deployment/kubernetes:
+total 0
+
+338 AGENT SYSTEM/docs:
+total 0
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 architecture
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 deployment
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 studio338
+
+338 AGENT SYSTEM/docs/architecture:
+total 0
+
+338 AGENT SYSTEM/docs/deployment:
+total 0
+
+338 AGENT SYSTEM/docs/studio338:
+total 0
+
+338 AGENT SYSTEM/scripts:
+total 0
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 agents
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 setup
+
+338 AGENT SYSTEM/scripts/agents:
+total 0
+
+338 AGENT SYSTEM/scripts/setup:
+total 0
+
+338 AGENT SYSTEM/tests:
+total 0
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 integration
+drwxr-xr-x  2 lfi  staff  68 Jun 10 00:22 unit
+
+338 AGENT SYSTEM/tests/integration:
+total 0
+
+338 AGENT SYSTEM/tests/unit:
+total 0

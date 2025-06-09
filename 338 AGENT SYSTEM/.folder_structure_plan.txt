@@ -1,0 +1,25 @@
+agents/
+  base/
+  studio338/
+  collaboration/
+  tools/
+app/
+  routers/
+    studio338/
+  services/
+    studio338/
+  schemas/
+    studio338/
+scripts/
+  setup/
+  agents/
+docs/
+  architecture/
+  deployment/
+  studio338/
+tests/
+  unit/
+  integration/
+deployment/
+  docker/
+  kubernetes/ 

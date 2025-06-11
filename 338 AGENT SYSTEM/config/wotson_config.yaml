@@ -1,0 +1,42 @@
+tech_manager_id: "441234567890@whatsapp.net"
+admin_ids:
+  - "441234567890@whatsapp.net"
+
+run_interval_hours: 2
+group_reply_threshold: 0.85
+inactivity_threshold_hours: 48
+event_reminder_days: 1
+
+paths:
+  data_root: "data/"
+  attachments: "data/attachments/"
+  event_media: "data/events/"
+  logs: "logs/wotson.log"
+
+whatsapp:
+  webhook_port: 5001
+  use_wwebjs: true
+  session_file: ".session/wotson.json"
+
+agent:
+  id: "wotson-studio338-001"
+  base_url: "http://localhost:8000"
+  docs_url: "http://docs.studio338.local"
+  poll_interval: 5
+  urgency_threshold: 0.7
+
+a2a_config:
+  # Configuration for Agent-to-Agent communication
+  placeholder: true
+
+mcp_config:
+  # Configuration for MCP tool connections
+  placeholder: true
+
+known_events:
+  # Configuration for known events
+  placeholder: true
+
+services:
+  whatsapp_mcp_server: "http://localhost:5002"
+  analysis_mcp_server: "http://localhost:5003" 

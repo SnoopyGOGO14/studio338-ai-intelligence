@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 import json
 
+from utils.config import CONFIG
+from modules.query_handler import handle_message_query
 from agents.base.base_agent import BaseAgent, AgentType, KnowledgeEntity, A2ATask
 from agents.base.a2a_agent import A2AProtocolManager
 from agents.base.mcp_client import MCPManager
@@ -48,11 +50,11 @@ class WotsonWhatsAppAgent(BaseAgent):
     for Studio338 venue operations.
     """
     
-    def __init__(self, config: Dict[str, Any]):
-        super().__init__("wotson-studio338-001", AgentType.WHATSAPP_MONITOR, config)
+    def __init__(self):
+        super().__init__(CONFIG["agent"]["id"], AgentType.WHATSAPP_MONITOR, CONFIG)
         
         # WhatsApp-specific components
-        self.gateway_checker = GatewayChecker(config.get("known_events", {}))
+        self.gateway_checker = GatewayChecker(CONFIG.get("known_events", {}))
         self.link_extractor = LinkParticipantExtractor()
         self.event_index = EventIndex()
         
@@ -62,8 +64,8 @@ class WotsonWhatsAppAgent(BaseAgent):
         self.equipment_keywords = self._load_equipment_keywords()
         
         # A2A and MCP managers
-        self.a2a_manager = A2AProtocolManager(self.agent_id, config.get("a2a_config", {}))
-        self.mcp_manager = MCPManager(self.agent_id, config.get("mcp_config", {}))
+        self.a2a_manager = A2AProtocolManager(self.agent_id, CONFIG.get("a2a_config", {}))
+        self.mcp_manager = MCPManager(self.agent_id, CONFIG.get("mcp_config", {}))
         
         # Performance tracking
         self.monitoring_stats = {
@@ -100,7 +102,7 @@ class WotsonWhatsAppAgent(BaseAgent):
         
         # WhatsApp API tools
         await self.mcp_manager.connect_tool_server("whatsapp-api", {
-            "server_url": self.config.get("whatsapp_mcp_server"),
+            "server_url": CONFIG["services"]["whatsapp_mcp_server"],
             "capabilities": [
                 "group-monitoring", "message-retrieval", "participant-tracking",
                 "media-download", "status-updates"
@@ -109,7 +111,7 @@ class WotsonWhatsAppAgent(BaseAgent):
         
         # Real-time analysis tools
         await self.mcp_manager.connect_tool_server("realtime-analyzer", {
-            "server_url": self.config.get("analysis_mcp_server"),
+            "server_url": CONFIG["services"]["analysis_mcp_server"],
             "capabilities": [
                 "urgency-detection", "sentiment-analysis", "entity-extraction",
                 "context-synthesis", "anomaly-detection"
@@ -140,7 +142,7 @@ class WotsonWhatsAppAgent(BaseAgent):
             "description": "Real-time WhatsApp monitoring and operational intelligence for Studio338",
             "version": "2.0.0",
             "agentType": "whatsapp_intelligence",
-            "endpoint": f"{self.config.get('base_url')}/agents/{self.agent_id}",
+            "endpoint": f"{CONFIG['agent']['base_url']}/agents/{self.agent_id}",
             "capabilities": {
                 "skills": [
                     {
@@ -214,7 +216,7 @@ class WotsonWhatsAppAgent(BaseAgent):
                 "vendor": "Studio338",
                 "category": "real-time-intelligence",
                 "tags": ["whatsapp", "monitoring", "urgency-detection", "venue-operations"],
-                "documentation": f"{self.config.get('docs_url')}/agents/wotson"
+                "documentation": f"{CONFIG['agent']['docs_url']}/agents/wotson"
             }
         }
     
@@ -271,172 +273,95 @@ class WotsonWhatsAppAgent(BaseAgent):
             )
         
         # Start monitoring loop
-        while True:
-            try:
-                # Fetch new messages
-                messages = await self._fetch_new_messages(group_id)
-                
-                for message in messages:
+        try:
+            while self.monitoring_active:
+                new_messages = await self._fetch_new_messages(group_id)
+                for message in new_messages:
                     await self._process_message(message)
-                    
-                # Update group urgency score
-                await self._update_group_urgency(group_id)
-                
-                # Check for situations requiring immediate action
-                await self._check_urgent_situations(group_id)
                 
                 # Brief pause before next check
-                await asyncio.sleep(self.config.get("poll_interval", 5))
+                await asyncio.sleep(CONFIG.get("agent", {}).get("poll_interval", 5))
                 
-            except Exception as e:
-                self.logger.error(f"Error monitoring group {group_id}: {e}")
-                await asyncio.sleep(30)  # Longer pause on error
+        except Exception as e:
+            self.logger.error(f"Monitoring loop for group {group_id} failed: {e}")
     
     async def _process_message(self, message: WhatsAppMessage) -> None:
-        """Process a single WhatsApp message."""
-        
-        self.monitoring_stats["messages_processed"] += 1
-        
-        # Extract data from message
-        extraction_result = self.link_extractor.extract_from_whatsapp([{
-            "sender": message.sender,
-            "text": message.content,
-            "timestamp": message.timestamp.isoformat()
-        }])
+        """Process a single incoming WhatsApp message by passing it to the query handler."""
         
         # Update group context
-        group_context = self.monitored_groups.get(message.group_id)
-        if group_context:
-            # Add participant
-            first_name = message.sender.split()[0] if message.sender else ""
-            group_context.participants.add(first_name)
-            
-            # Keep recent messages (last 100)
-            group_context.recent_messages.append(message)
-            if len(group_context.recent_messages) > 100:
-                group_context.recent_messages.pop(0)
-            
-            group_context.last_activity = message.timestamp
+        self.monitored_groups[message.group_id].recent_messages.append(message)
+        self.monitored_groups[message.group_id].last_activity = message.timestamp
+        self.monitoring_stats["messages_processed"] += 1
         
-        # Add to event index
-        if extraction_result:
-            item = extraction_result[0]
-            await self.event_index.add_communication(
-                group_context.event_id or "uncategorized",
-                item
-            )
+        # Pass to query handler for decision making
+        # The message dataclass needs to be converted to a dict for the handler
+        message_dict = {
+            "message_id": message.message_id,
+            "group_id": message.group_id,
+            "group_name": message.group_name,
+            "sender": message.sender,
+            "content": message.content,
+            "timestamp": message.timestamp.isoformat(),
+            "attachments": message.attachments,
+            "mentions": message.mentions,
+        }
+        action_result = handle_message_query(message_dict, CONFIG)
         
-        # Check for urgency indicators
-        urgency_score = await self._calculate_message_urgency(message)
-        if urgency_score > self.config.get("urgency_threshold", 0.7):
-            await self._handle_urgent_message(message, urgency_score)
+        self.logger.info(f"Query handler result for message {message.message_id}: {action_result['action']} - {action_result['details']}")
+
+        # Act on the result from the query handler
+        if action_result["action"] == "escalate":
+            await self._handle_urgent_message(message, action_result["urgency_score"])
         
-        # Extract knowledge if relevant
+        # Extract knowledge if worthy (this logic could also move to the query handler)
         if await self._is_knowledge_worthy(message):
             knowledge_entities = await self.extract_knowledge(message)
             for entity in knowledge_entities:
-                await self.update_knowledge(entity)
-    
-    async def _calculate_message_urgency(self, message: WhatsAppMessage) -> float:
-        """Calculate urgency score for a message."""
-        
-        content_lower = message.content.lower()
-        urgency_score = 0.0
-        
-        # Check urgency patterns
-        for pattern, weight in self.urgency_patterns.items():
-            if re.search(pattern, content_lower):
-                urgency_score += weight
-                self._log_decision(
-                    "urgency_detection",
-                    f"Urgency pattern '{pattern}' detected",
-                    {"message_id": message.message_id, "weight": weight}
-                )
-        
-        # Use MCP tool for advanced urgency detection
-        urgency_analysis = await self.invoke_mcp_tool("realtime-analyzer", {
-            "action": "analyze-urgency",
-            "text": message.content,
-            "context": {
-                "sender": message.sender,
-                "group": message.group_name,
-                "recent_activity": self._get_recent_group_activity(message.group_id)
-            }
-        })
-        
-        if urgency_analysis.get("success"):
-            ai_urgency = urgency_analysis["result"].get("urgency_score", 0)
-            urgency_score = max(urgency_score, ai_urgency)
-        
-        return min(urgency_score, 1.0)  # Cap at 1.0
+                await self.add_knowledge(entity)
+                self.monitoring_stats["knowledge_entities_created"] += 1
     
     async def _handle_urgent_message(self, message: WhatsAppMessage, urgency_score: float) -> None:
-        """Handle messages identified as urgent."""
-        
-        self.monitoring_stats["urgent_situations_detected"] += 1
-        
+        """Handles a message identified as urgent by the query handler."""
         self.logger.warning(
-            f"Urgent message detected (score: {urgency_score:.2f}) "
-            f"in group {message.group_name}: {message.content[:100]}..."
+            f"URGENT SITUATION DETECTED in group '{message.group_name}' "
+            f"(Score: {urgency_score:.2f}): '{message.content}'"
         )
-        
-        # Get historical context from ELA
+        # Logic to escalate, e.g., create A2A task, notify admin, etc.
+        self.monitoring_stats["urgent_situations_detected"] += 1
+
+        # Example: Consult ELA for historical context on similar issues
         historical_context = await self._get_historical_context(message)
-        
-        # Synthesize comprehensive response
-        response_data = await self._synthesize_urgent_response(
-            message, urgency_score, historical_context
-        )
-        
-        # Notify relevant parties
-        await self._notify_urgent_situation(response_data)
-        
-        # Create knowledge entity for future reference
-        entity = KnowledgeEntity(
-            entity_id=f"urgent_{message.message_id}",
-            entity_type="incident",
-            content=f"Urgent situation: {message.content}",
-            confidence_score=urgency_score,
-            source_agent=self.agent_type,
-            source_data=[message.message_id],
-            created_at=datetime.utcnow(),
-            last_updated=datetime.utcnow(),
-            relationships=[],
-            venue_context={
-                "urgency_score": urgency_score,
-                "group": message.group_name,
-                "response": response_data
-            }
-        )
-        await self.update_knowledge(entity)
+        if historical_context:
+            self.logger.info(f"ELA provided historical context: {historical_context}")
     
     async def _get_historical_context(self, message: WhatsAppMessage) -> Dict[str, Any]:
-        """Get historical context from ELA for better decision making."""
-        
+        """Consult with ELA for historical context on an urgent issue."""
+        self.logger.info("Consulting ELA for historical context...")
         self.monitoring_stats["ela_consultations"] += 1
         
-        # Identify equipment or procedures mentioned
-        equipment_mentioned = self._extract_equipment_references(message.content)
-        
-        # Query ELA for historical context
-        ela_response = await self.delegate_task(
-            "ela-studio338-001",
-            "historical-email-analysis",
-            {
-                "timeframe": "30d",
-                "equipment_focus": equipment_mentioned,
-                "categories": ["equipment-issues", "maintenance", "incidents"],
-                "urgency_filter": "urgent"
-            },
-            priority=9,  # High priority for urgent situations
-            timeout=10   # Quick response needed
-        )
-        
-        return ela_response.get("result", {})
+        try:
+            response = await self.a2a_manager.send_task("ela-studio338-001", {
+                "taskId": f"wotson-urgency-{message.message_id}",
+                "skill_id": "historical-context",
+                "parameters": {
+                    "query": message.content,
+                    "equipment": self._extract_equipment_references(message.content),
+                    "context": {
+                        "group": message.group_name,
+                        "sender": message.sender
+                    }
+                }
+            })
+            return response.get("data", {})
+        except Exception as e:
+            self.logger.error(f"Failed to get historical context from ELA: {e}")
+            return {}
     
     async def extract_knowledge(self, message: WhatsAppMessage) -> List[KnowledgeEntity]:
-        """Extract knowledge entities from WhatsApp messages."""
-        
+        """
+        Extracts structured knowledge from a WhatsApp message.
+        This could be event details, equipment status, procedural updates, etc.
+        """
         entities = []
         content_lower = message.content.lower()
         
@@ -499,35 +424,14 @@ class WotsonWhatsAppAgent(BaseAgent):
         return event_id, reason
     
     async def _fetch_new_messages(self, group_id: str) -> List[WhatsAppMessage]:
-        """Fetch new messages from WhatsApp group."""
-        
-        # Use MCP tool to fetch messages
-        result = await self.invoke_mcp_tool("whatsapp-api", {
-            "action": "fetch-messages",
-            "group_id": group_id,
-            "since": self._get_last_fetch_time(group_id),
-            "limit": 50
-        })
-        
-        if not result.get("success"):
-            return []
-        
-        # Convert to WhatsAppMessage objects
-        messages = []
-        for msg_data in result["result"]["messages"]:
-            message = WhatsAppMessage(
-                message_id=msg_data["id"],
-                group_id=group_id,
-                group_name=self.monitored_groups[group_id].group_name,
-                sender=msg_data["sender"],
-                content=msg_data["content"],
-                timestamp=datetime.fromisoformat(msg_data["timestamp"]),
-                attachments=msg_data.get("attachments", []),
-                mentions=msg_data.get("mentions", [])
-            )
-            messages.append(message)
-        
-        return messages
+        """
+        Fetches new messages from a WhatsApp group since the last check.
+        This is a placeholder for the actual WhatsApp API integration.
+        """
+        # In a real implementation, this would connect to the WhatsApp API
+        # and retrieve messages since the last known timestamp.
+        await asyncio.sleep(2) # Simulate network delay
+        return []
     
     def _extract_equipment_references(self, text: str) -> List[str]:
         """Extract equipment references from message text."""
@@ -535,91 +439,52 @@ class WotsonWhatsAppAgent(BaseAgent):
         text_lower = text.lower()
         
         for equipment in self.equipment_keywords:
-            if equipment.lower() in text_lower:
+            if re.search(r'\b' + re.escape(equipment) + r'\b', text, re.IGNORECASE):
                 equipment_found.append(equipment)
         
         return equipment_found
     
     def _is_equipment_issue(self, text: str, equipment: str) -> bool:
-        """Determine if message indicates an equipment issue."""
-        issue_indicators = [
-            "broken", "not working", "failed", "issue", "problem",
-            "malfunction", "error", "fault", "damaged", "needs repair"
-        ]
-        
+        """Checks if text mentions an issue with a piece of equipment."""
+        # Simple keyword matching for demonstration
+        issue_keywords = ["broken", "down", "issue", "fault", "not working", "problem"]
         text_lower = text.lower()
-        equipment_lower = equipment.lower()
-        
-        # Check if equipment and issue indicator appear near each other
-        for indicator in issue_indicators:
-            if indicator in text_lower and equipment_lower in text_lower:
-                # Simple proximity check (within 50 characters)
-                equipment_pos = text_lower.find(equipment_lower)
-                indicator_pos = text_lower.find(indicator)
-                if abs(equipment_pos - indicator_pos) < 50:
+        if equipment.lower() in text_lower:
+            for keyword in issue_keywords:
+                if keyword in text_lower:
                     return True
-        
         return False
     
     def _load_urgency_patterns(self) -> Dict[str, float]:
-        """Load urgency detection patterns."""
+        """Loads urgency patterns from a file or config."""
+        # This should come from a config file or a dedicated patterns file.
         return {
-            r'\b(urgent|emergency|critical|asap|immediately)\b': 0.8,
-            r'\b(broken|failed|not working|down)\b': 0.6,
-            r'\b(help|need|required|must)\b': 0.4,
-            r'\b(accident|injury|fire|flood)\b': 1.0,
-            r'\b(power out|blackout|no electricity)\b': 0.7,
-            r'\b(cancelled|postponed)\b': 0.5,
-            r'[!]{2,}': 0.3,  # Multiple exclamation marks
-            r'\b(NOW|URGENT|HELP)\b': 0.7  # All caps urgency words
+            r"\b(urgent|asap|critical)\b": 1.0,
+            r"\b(help|issue|problem)\b": 0.8,
+            r"\b(down|broken|failed)\b": 0.9,
+            r"\b(power cut|power loss|no power)\b": 1.0,
+            r"\b(leak|flood|water)\b": 0.95,
         }
     
     def _load_equipment_keywords(self) -> List[str]:
-        """Load equipment keywords for Studio338."""
-        return [
-            # Audio equipment
-            "mixer", "CDJ", "turntable", "speakers", "amplifier", "microphone",
-            "sound system", "PA system", "monitor", "subwoofer",
-            
-            # Lighting
-            "lights", "LED", "strobe", "laser", "moving head", "spotlight",
-            "lighting rig", "DMX", "controller",
-            
-            # Infrastructure
-            "generator", "power", "electrical", "HVAC", "air conditioning",
-            "heating", "plumbing", "security system",
-            
-            # Staging
-            "stage", "platform", "barrier", "fence", "scaffold",
-            
-            # Safety
-            "fire extinguisher", "emergency exit", "first aid"
-        ]
+        """Loads equipment keywords from a file or config."""
+        # This should come from a config file.
+        return ["Pioneer", "CDJ", "mixer", "lights", "sound system", "generator"]
     
     async def _is_knowledge_worthy(self, message: WhatsAppMessage) -> bool:
-        """Determine if a message contains knowledge worth extracting."""
-        
-        # Check for equipment references
-        if self._extract_equipment_references(message.content):
+        """Determines if a message contains valuable information for the knowledge base."""
+        # Simple logic: if it's not urgent but contains equipment names or procedure updates.
+        text = message.content.lower()
+        if self._extract_equipment_references(text):
             return True
-        
-        # Check for procedural information
-        if self._contains_procedure_update(message.content):
+        if self._contains_procedure_update(text):
             return True
-        
-        # Check for incident reports
-        if await self._calculate_message_urgency(message) > 0.5:
-            return True
-        
         return False
     
     def _contains_procedure_update(self, text: str) -> bool:
-        """Check if message contains procedural information."""
-        procedure_indicators = [
-            "procedure", "process", "protocol", "steps", "instructions",
-            "how to", "make sure", "always", "never", "must",
-            "policy", "rule", "requirement"
-        ]
-        
-        text_lower = text.lower()
-        return any(indicator in text_lower for indicator in procedure_indicators)
+        """Checks for keywords indicating a procedural update."""
+        update_keywords = ["procedure", "protocol", "new way", "do this from now on"]
+        for keyword in update_keywords:
+            if keyword in text:
+                return True
+        return False

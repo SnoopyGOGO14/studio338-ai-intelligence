@@ -15,6 +15,7 @@ paths:
 
 whatsapp:
   webhook_port: 5001
+  webhook_url: "http://localhost:5001/send"
   use_wwebjs: true
   session_file: ".session/wotson.json"
 

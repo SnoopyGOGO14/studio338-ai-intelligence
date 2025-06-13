@@ -2,7 +2,7 @@ import time
 import schedule
 from modules.scheduled_tasks import run_all_scheduled_tasks
 from utils.config import CONFIG
-from database import initialize_database
+from db.database import initialize_database
 
 def main():
     """

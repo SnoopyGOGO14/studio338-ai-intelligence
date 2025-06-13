@@ -17,7 +17,6 @@ from modules.query_handler import handle_message_query
 from agents.base.base_agent import BaseAgent, AgentType, KnowledgeEntity, A2ATask
 from agents.base.a2a_agent import A2AProtocolManager
 from agents.base.mcp_client import MCPManager
-from database import log_message
 
 @dataclass
 class WhatsAppMessage:
@@ -306,9 +305,6 @@ class WotsonWhatsAppAgent(BaseAgent):
             "attachments": message.attachments,
             "mentions": message.mentions,
         }
-        
-        # Log the original message to the database
-        log_message(message_dict)
         
         action_result = handle_message_query(message_dict, CONFIG)
         

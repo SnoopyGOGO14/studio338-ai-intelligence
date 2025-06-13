@@ -11,8 +11,8 @@ from typing import List, Dict, Any
 
 from utils.config import CONFIG
 from modules.query_handler import handle_message_query
-from database import get_unanswered_questions, get_upcoming_events, get_all_groups_activity
-from modules.whatsapp_service import send_group_reply, send_dm
+from db.database import get_unanswered_questions, get_upcoming_events, get_group_silence_state
+from modules.whatsapp_service import send_group_message, send_private_message
 
 # --- Core Scheduler Functions ---
 
@@ -35,12 +35,12 @@ def scan_unanswered_questions():
         if result["urgency_score"] >= reply_threshold:
             # High confidence, auto-reply
             response = f"Hi! Based on our knowledge base, the answer to your question might be: [Automated Answer Placeholder]. If this isn't right, an admin will assist shortly."
-            send_group_reply(question["group_id"], response)
+            send_group_message(question["group_id"], response)
         else:
             # Low confidence, forward to admin
             for admin_id in admin_ids:
-                message = f"An unanswered question in '{question.get('group_name', 'a group')}' needs your attention: '{question['content']}'"
-                send_dm(admin_id, message)
+                message = f"An unanswered question in a group needs your attention: '{question['content']}'"
+                send_private_message(admin_id, message)
 
 def send_event_reminders():
     """
@@ -54,32 +54,23 @@ def send_event_reminders():
         return
 
     for event in events:
-        reminder_message = f"🔔 REMINDER: The event '{event['event_name']}' is scheduled to start soon."
-        # The 'relevant_groups' column is stored as a JSON string
-        import json
-        try:
-            group_ids = json.loads(event.get("relevant_groups", "[]"))
-            for group_id in group_ids:
-                send_group_reply(group_id, reminder_message)
-        except json.JSONDecodeError:
-            print(f"Error: Could not parse relevant_groups for event {event['event_id']}")
+        reminder_message = f"🔔 REMINDER: The event '{event['name']}' is scheduled to start soon."
+        send_group_message(event["group_id"], reminder_message)
 
 def check_group_inactivity():
     """
     Detects inactive groups and sends a check-in message.
     """
-    groups_activity = get_all_groups_activity()
-    inactivity_threshold = datetime.timedelta(hours=CONFIG.get("inactivity_threshold_hours", 48))
+    inactive_hours = CONFIG.get("inactivity_threshold_hours", 8)
+    silent_groups = get_group_silence_state(inactive_hours)
     
-    if not groups_activity:
-        print("SCHEDULER: No group activity found to check.")
+    if not silent_groups:
+        print("SCHEDULER: No inactive groups found.")
         return
 
-    for group in groups_activity:
-        last_activity = datetime.datetime.fromisoformat(group["last_activity_ts"])
-        if (datetime.datetime.utcnow() - last_activity) > inactivity_threshold:
-            check_in_message = "👋 Just checking in! It's been a bit quiet here. Is everything running smoothly?"
-            send_group_reply(group["group_id"], check_in_message)
+    for group in silent_groups:
+        check_in_message = f"👋 Just checking in! It's been a bit quiet in the '{group['event_name']}' group. Is everything running smoothly?"
+        send_group_message(group["group_id"], check_in_message)
 
 def run_all_scheduled_tasks():
     """

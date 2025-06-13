@@ -26,17 +26,11 @@ agent:
   poll_interval: 5
   urgency_threshold: 0.7
 
-a2a_config:
-  # Configuration for Agent-to-Agent communication
-  placeholder: true
+a2a_config: {}
 
-mcp_config:
-  # Configuration for MCP tool connections
-  placeholder: true
+mcp_config: {}
 
-known_events:
-  # Configuration for known events
-  placeholder: true
+known_events: {}
 
 services:
   whatsapp_mcp_server: "http://localhost:5002"

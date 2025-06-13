@@ -51,19 +51,34 @@ def initialize_database():
             FOREIGN KEY (group_id) REFERENCES WhatsAppGroups(id)
         );
         """)
+
+        # Add indexes for performance
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_group_timestamp ON WhatsAppMessages (group_id, timestamp);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_category ON WhatsAppMessages (category);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_groups_event_id ON WhatsAppGroups (event_id);")
+
         conn.commit()
-        print("Database initialized successfully with new schema.")
+        print("Database initialized successfully with new schema and indexes.")
 
 def get_unanswered_questions() -> list:
     """
     Fetches all messages that look like questions and haven't been answered.
     """
     with get_conn() as conn:
+        # This query is improved to be more robust than a simple LIKE check.
         rows = conn.execute("""
             SELECT * FROM WhatsAppMessages
-            WHERE content LIKE '%?'
-              AND category IS NULL
-              AND timestamp >= datetime('now', '-24 hours')
+            WHERE (
+                content LIKE '%?' OR
+                LOWER(content) LIKE 'who %' OR
+                LOWER(content) LIKE 'what %' OR
+                LOWER(content) LIKE 'when %' OR
+                LOWER(content) LIKE 'where %' OR
+                LOWER(content) LIKE 'why %' OR
+                LOWER(content) LIKE 'how %'
+            )
+            AND category IS NULL
+            AND timestamp >= datetime('now', '-24 hours')
         """)
         return [dict(row) for row in rows.fetchall()]
 

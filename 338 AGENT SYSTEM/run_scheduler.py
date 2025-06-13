@@ -2,11 +2,15 @@ import time
 import schedule
 from modules.scheduled_tasks import run_all_scheduled_tasks
 from utils.config import CONFIG
+from database import initialize_database
 
 def main():
     """
     Main function to set up and run the scheduled tasks for WOTSON.
     """
+    # Initialize the database and create tables if they don't exist
+    initialize_database()
+
     try:
         run_interval = int(CONFIG.get("run_interval_hours", 2))
     except (ValueError, TypeError):

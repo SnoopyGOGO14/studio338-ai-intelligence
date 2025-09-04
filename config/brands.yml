@@ -1,0 +1,5 @@
+# Placeholder brand list for Little RAG.
+# Populate with real brand names and aliases as needed.
+brands:
+  - name: ExampleBrand
+    aliases: ["Example Alias"]

@@ -1,8 +1,5 @@
-calendars:
-  - type: ics
-    url: "https://example.com/338.ics"
-  - type: csv
-    url: "https://docs.google.com/spreadsheets/d/.../export?format=csv"
+# Configuration skeleton for Little RAG runner.
+calendars: []
 poll_minutes: 10
 brand_list: "config/brands.yml"
 parent_api: "http://127.0.0.1:8000"

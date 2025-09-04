@@ -1,52 +1,38 @@
-"""FastAPI endpoints for Little RAG communication."""
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List, Optional
+"""Skeleton FastAPI surface for Little RAG communication.
+
+Endpoints are placeholders to be implemented alongside the runner.
+"""
+
+from fastapi import FastAPI
 
 app = FastAPI(title="Parent Little RAG API")
 
-class Heartbeat(BaseModel):
-    calendar_ok: int
-    last_poll_ts: str
-
-class SummaryRow(BaseModel):
-    event_date: str
-    brand: str
-    group_title: str
-    group_id: str
-    last_active_ts: Optional[str] = None
-    match_conf: float
-    status: str
-    notes: List[str] = []
-
-_summary_cache: List[SummaryRow] = []
 
 @app.post("/little/heartbeat")
-async def post_heartbeat(hb: Heartbeat):
-    # In a full system, this would persist to the database
-    return {"ok": True}
+async def post_heartbeat() -> dict:
+    """Receive health pings from Little RAG."""
+    raise NotImplementedError
+
 
 @app.post("/little/summary")
-async def post_summary(rows: List[SummaryRow]):
-    global _summary_cache
-    _summary_cache = rows
-    return {"received": len(rows)}
+async def post_summary() -> dict:
+    """Accept summary rows from Little RAG."""
+    raise NotImplementedError
 
-@app.get("/little/summary", response_model=List[SummaryRow])
+
+@app.get("/little/summary")
 async def get_summary():
-    return _summary_cache
+    """Return the most recent summary."""
+    raise NotImplementedError
+
 
 @app.post("/little/match")
-async def post_match(row: SummaryRow):
-    if row.status != "matched":
-        raise HTTPException(400, "row.status must be 'matched'")
-    # Persist mapping here in a full implementation
-    return {"mapped": row.group_id, "event_date": row.event_date}
+async def post_match() -> dict:
+    """Persist confirmed event/group mappings."""
+    raise NotImplementedError
+
 
 @app.get("/groups/list")
 async def get_groups():
-    # Placeholder: in production this would query WhatsApp groups
-    return [
-        {"group_id": "123", "name": "Studio338 Launch", "last_active_ts": "2024-01-01T00:00:00"},
-        {"group_id": "456", "name": "AnotherBrand 2024", "last_active_ts": "2024-01-05T00:00:00"},
-    ]
+    """List known WhatsApp groups for matching."""
+    raise NotImplementedError

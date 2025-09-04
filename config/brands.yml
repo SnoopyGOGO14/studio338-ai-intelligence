@@ -1,0 +1,5 @@
+brands:
+  - name: Studio338
+    aliases: ["Studio 338", "S338"]
+  - name: AnotherBrand
+    aliases: ["AB", "Another Brand"]
